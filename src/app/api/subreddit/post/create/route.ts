@@ -21,8 +21,8 @@ export async function POST(req: Request) {
             },
         })
 
-        if (subscriptionExists) {
-            return new Response('Subcribe to Post', { status: 400 })
+        if (!subscriptionExists) {
+            return new Response('Subcribe to Post', { status: 403 })
         }
 
         // create post
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     } catch (error) {
         if (error instanceof z.ZodError) {
-            return new Response('Invalid request data passed', { status: 422 })
+            return new Response('Invalid request data passed', { status: 400 })
         }
 
         return new Response('Could not create post', { status: 500 })

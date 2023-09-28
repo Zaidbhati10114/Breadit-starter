@@ -24,6 +24,7 @@ const Editor: FC<EditorProps> = ({ subredditId }) => {
   } = useForm<PostCreationRequest>({
     resolver: zodResolver(PostValidator),
     defaultValues: {
+      subredditId,
       title: "",
       content: null,
     },
@@ -34,6 +35,39 @@ const Editor: FC<EditorProps> = ({ subredditId }) => {
   const _titleRef = useRef<HTMLTextAreaElement>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  const { mutate: createPost } = useMutation({
+    mutationFn: async ({
+      title,
+      content,
+      subredditId,
+    }: PostCreationRequest) => {
+      const payload: PostCreationRequest = {
+        subredditId,
+        title,
+        content,
+      };
+
+      const { data } = await axios.post("/api/subreddit/post/create", payload);
+      return data;
+    },
+    onError: () => {
+      return toast({
+        title: "Something went wrong",
+        description: "Youre post was not created.Please try again later",
+        variant: "destructive",
+      });
+    },
+    onSuccess: () => {
+      const newPathname = pathname.split("/").slice(0, -1).join("/");
+      router.push(newPathname);
+      router.refresh();
+      return toast({
+        title: "Great!",
+        description: "Youre post has been created",
+      });
+    },
+  });
 
   const intiliazeEditor = useCallback(async () => {
     const EditorJS = (await import("@editorjs/editorjs")).default;
@@ -90,14 +124,9 @@ const Editor: FC<EditorProps> = ({ subredditId }) => {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsMounted(true);
-    }
-  });
-
-  useEffect(() => {
     if (Object.keys(errors).length) {
       for (const [_key, value] of Object.entries(errors)) {
+        value;
         toast({
           title: "Something went wrong",
           description: (value as { message: string }).message,
@@ -105,7 +134,13 @@ const Editor: FC<EditorProps> = ({ subredditId }) => {
         });
       }
     }
-  });
+  }, [errors]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsMounted(true);
+    }
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -123,39 +158,6 @@ const Editor: FC<EditorProps> = ({ subredditId }) => {
       ref.current = undefined;
     };
   }, [isMountetd, intiliazeEditor]);
-
-  const { mutate: createPost } = useMutation({
-    mutationFn: async ({
-      title,
-      content,
-      subredditId,
-    }: PostCreationRequest) => {
-      const payload: PostCreationRequest = {
-        subredditId,
-        title,
-        content,
-      };
-
-      const { data } = await axios.post("/api/subreddit/post/create", payload);
-      return data;
-    },
-    onError: () => {
-      return toast({
-        title: "Something went wrong",
-        description: "Youre post was not created.Please try again later",
-        variant: "destructive",
-      });
-    },
-    onSuccess: () => {
-      const newPathname = pathname.split("/").slice(0, -1).join("/");
-      router.push(newPathname);
-      router.refresh();
-      return toast({
-        title: "Great!",
-        description: "Youre post has been created",
-      });
-    },
-  });
 
   async function onSubmit(data: PostCreationRequest) {
     const blocks = await ref.current?.save();
@@ -185,7 +187,7 @@ const Editor: FC<EditorProps> = ({ subredditId }) => {
             ref={(e) => {
               titleRef(e);
               // @ts-ignore
-              _titleRef.current = 0;
+              _titleRef.current = e;
             }}
             {...rest}
             placeholder="Title"
